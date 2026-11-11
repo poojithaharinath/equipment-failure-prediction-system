@@ -296,4 +296,5 @@ The generator is deterministic for seed `20261022` and writes the ground truth w
 3372bf6731afd02e205e4d15aec385d3b0333bd2f2771531f0ed862a9aa5b704
 ```
 
+
 `python -m pytest backend/tests/test_reproducibility.py -v` regenerates the dataset into a temp directory and checks that it is byte-for-byte identical to the committed `data/ground_truth/ground_truth.csv`.

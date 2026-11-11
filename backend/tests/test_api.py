@@ -7,7 +7,45 @@ client = TestClient(app)
 def test_health_check():
     response = client.get("/health")
     assert response.status_code == 200
-    assert response.json()["status"] == "HEALTHY"
+    body = response.json()
+    assert body["status"] == "HEALTHY"
+    assert body["database"]["status"] == "CONNECTED"
+    assert body["model"]["status"] == "LOADED"
+
+def test_health_reports_unhealthy_when_database_down(monkeypatch):
+    import backend.app.main as main
+    monkeypatch.setattr(main, "check_database", lambda: {"backend": "postgresql", "status": "UNAVAILABLE", "error": "down"})
+    response = client.get("/health")
+    assert response.status_code == 503
+    assert response.json()["status"] == "UNHEALTHY"
+
+def test_missing_model_returns_503_not_heuristic(monkeypatch, tmp_path):
+    from backend.app.core.config import settings
+    monkeypatch.setattr(settings, "MODEL_PATH", str(tmp_path / "missing.joblib"))
+    response = client.get("/api/predictions/machine/MCH-LINE-PLT-001-001-001?refresh=true")
+    assert response.status_code == 503
+    assert response.json()["error"] == "MODEL_NOT_AVAILABLE"
+    health = client.get("/health")
+    assert health.status_code == 503
+    assert health.json()["model"]["status"] == "UNAVAILABLE"
+
+def test_alerts_pagination():
+    response = client.get("/api/alerts?page=1&page_size=5")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["page_size"] == 5
+    assert len(data["items"]) == min(5, data["total"])
+    assert data["total_pages"] == max(1, -(-data["total"] // 5))
+
+def test_settings_resolve_paths_from_project_root():
+    import os
+    from backend.app.core.config import settings, PROJECT_ROOT, resolve_path
+    assert settings.MODEL_PATH == "backend/app/ml/saved_models/failure_prediction_rf.joblib"
+    assert os.path.exists(settings.model_file)
+    # Relative config paths resolve from the project root (independent of CWD / test overrides).
+    metrics = resolve_path("data/reports/model_evaluation_report.json")
+    assert metrics.startswith(str(PROJECT_ROOT))
+    assert os.path.exists(metrics)
 
 def test_root():
     response = client.get("/")
@@ -78,3 +116,4 @@ def test_validation_report():
     assert response.status_code == 200
     data = response.json()
     assert "breakdown_by_category" in data
+

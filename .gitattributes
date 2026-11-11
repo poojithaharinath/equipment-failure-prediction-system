@@ -1,0 +1,7 @@
+# Identical LF checkouts on every OS (keeps the ground-truth checksum and shell/Docker files stable).
+* text=auto eol=lf
+
+*.joblib binary
+*.db binary
+*.png binary
+*.ico binary

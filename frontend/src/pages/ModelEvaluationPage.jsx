@@ -20,6 +20,8 @@ import {
   Cell
 } from 'recharts';
 import api from '../services/api';
+import MetricCard from '../components/MetricCard';
+import { formatProbability } from '../utils/formatters';
 
 export default function ModelEvaluationPage() {
   const [report, setReport] = useState(null);
@@ -105,35 +107,40 @@ export default function ModelEvaluationPage() {
       {/* 5 ML Performance Metric Cards */}
       {champion && (
         <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
-          <div className="bg-slate-900 border border-slate-800 rounded-xl p-4">
-            <span className="text-slate-400 text-xs font-medium block">Accuracy</span>
-            <p className="text-2xl font-bold text-white mt-1">{(champion.accuracy * 100).toFixed(1)}%</p>
-            <span className="text-[10px] text-emerald-400 font-mono mt-1 block">Baseline: {(baseline?.accuracy * 100).toFixed(1)}%</span>
-          </div>
-
-          <div className="bg-slate-900 border border-slate-800 rounded-xl p-4">
-            <span className="text-slate-400 text-xs font-medium block">Precision</span>
-            <p className="text-2xl font-bold text-cyan-400 mt-1">{(champion.precision * 100).toFixed(1)}%</p>
-            <span className="text-[10px] text-slate-400 font-mono mt-1 block">Low False Positive Rate</span>
-          </div>
-
-          <div className="bg-slate-900 border border-slate-800 rounded-xl p-4">
-            <span className="text-slate-400 text-xs font-medium block">Recall</span>
-            <p className="text-2xl font-bold text-emerald-400 mt-1">{(champion.recall * 100).toFixed(1)}%</p>
-            <span className="text-[10px] text-slate-400 font-mono mt-1 block">Failure Capture Rate</span>
-          </div>
-
-          <div className="bg-slate-900 border border-slate-800 rounded-xl p-4">
-            <span className="text-slate-400 text-xs font-medium block">F1-Score</span>
-            <p className="text-2xl font-bold text-indigo-400 mt-1">{(champion.f1_score * 100).toFixed(1)}%</p>
-            <span className="text-[10px] text-slate-400 font-mono mt-1 block">Harmonic Mean</span>
-          </div>
-
-          <div className="bg-slate-900 border border-slate-800 rounded-xl p-4">
-            <span className="text-slate-400 text-xs font-medium block">ROC-AUC</span>
-            <p className="text-2xl font-bold text-purple-400 mt-1">{(champion.roc_auc * 100).toFixed(1)}%</p>
-            <span className="text-[10px] text-slate-400 font-mono mt-1 block">Discrimination Power</span>
-          </div>
+          <MetricCard
+            label="Accuracy"
+            value={formatProbability(champion.accuracy, 1)}
+            subtext={`Baseline: ${formatProbability(baseline?.accuracy, 1)}`}
+            subtextClassName="text-emerald-400 font-mono"
+          />
+          <MetricCard
+            label="Precision"
+            value={formatProbability(champion.precision, 1)}
+            valueClassName="text-cyan-400"
+            subtext="Low False Positive Rate"
+            subtextClassName="text-slate-400 font-mono"
+          />
+          <MetricCard
+            label="Recall"
+            value={formatProbability(champion.recall, 1)}
+            valueClassName="text-emerald-400"
+            subtext="Failure Capture Rate"
+            subtextClassName="text-slate-400 font-mono"
+          />
+          <MetricCard
+            label="F1-Score"
+            value={formatProbability(champion.f1_score, 1)}
+            valueClassName="text-indigo-400"
+            subtext="Harmonic Mean"
+            subtextClassName="text-slate-400 font-mono"
+          />
+          <MetricCard
+            label="ROC-AUC"
+            value={formatProbability(champion.roc_auc, 1)}
+            valueClassName="text-purple-400"
+            subtext="Discrimination Power"
+            subtextClassName="text-slate-400 font-mono"
+          />
         </div>
       )}
 
@@ -298,3 +305,4 @@ export default function ModelEvaluationPage() {
     </div>
   );
 }
+

@@ -1,8 +1,10 @@
 import logging
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from backend.app.core.config import settings
-from backend.app.core.database import init_db
+from backend.app.core.database import check_database
+from backend.app.ml.predictor import ModelNotAvailableError, get_model_status
 
 # Import API routers
 from backend.app.api.plants import router as plants_router
@@ -24,27 +26,36 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("PredictiveMaintenanceAPI")
 
 app = FastAPI(
-    title="AI-Based Predictive Maintenance System API",
+    title=f"{settings.APP_NAME} API",
     description="End-to-end industrial IoT telemetry monitoring, equipment failure prediction, and maintenance management REST API.",
     version="1.0.0",
     docs_url="/docs",
     redoc_url="/redoc"
 )
 
-# CORS Middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"], # Allow all for local dev & docker
+    allow_origins=settings.CORS_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
+
+@app.exception_handler(ModelNotAvailableError)
+def model_not_available_handler(request: Request, exc: ModelNotAvailableError):
+    return JSONResponse(status_code=503, content={"detail": str(exc), "error": "MODEL_NOT_AVAILABLE"})
+
+
 @app.on_event("startup")
 def on_startup():
-    logger.info("Initializing database schema and checking model availability...")
-    init_db()
-    logger.info("Application startup completed successfully.")
+    database = check_database()
+    if database["status"] != "CONNECTED":
+        logger.error("Database unavailable: %s", database.get("error"))
+    model = get_model_status()
+    if model["status"] != "LOADED":
+        logger.error("ML model unavailable: %s", model["error"])
+    logger.info("Application startup completed.")
 
 # Mount API Routers
 app.include_router(dashboard_router, prefix=settings.API_V1_PREFIX)
@@ -74,11 +85,16 @@ def root():
 
 @app.get("/health")
 def health_check():
-    return {
-        "status": "HEALTHY",
-        "database": "CONNECTED",
-        "version": "1.0.0"
+    database = check_database()
+    model = get_model_status()
+    healthy = database["status"] == "CONNECTED" and model["status"] == "LOADED"
+    body = {
+        "status": "HEALTHY" if healthy else "UNHEALTHY",
+        "database": database,
+        "model": model,
+        "version": "1.0.0",
     }
+    return JSONResponse(status_code=200 if healthy else 503, content=body)
 
 if __name__ == "__main__":
     import uvicorn

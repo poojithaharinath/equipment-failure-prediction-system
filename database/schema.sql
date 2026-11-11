@@ -2,6 +2,12 @@
 -- AI-Based Predictive Maintenance System - Database Schema (PostgreSQL DDL)
 -- Version: 1.0.0
 -- Created for: Equipment Failure Prediction System
+--
+-- REFERENCE ONLY. Runtime schema is applied by Alembic
+-- (database/migrations/versions/001_initial_schema.py), which uses FLOAT and
+-- naive TIMESTAMP types matching the SQLAlchemy models. This file may use
+-- NUMERIC / TIMESTAMPTZ for readable PostgreSQL documentation.
+-- telemetry_events.sensor_id has no FK (UNKNOWN_SENSOR edge case).
 -- ============================================================================
 
 -- Drop existing tables if re-initializing (in reverse dependency order)
@@ -108,7 +114,8 @@ CREATE INDEX idx_sensors_status ON sensors(status);
 -- ----------------------------------------------------------------------------
 CREATE TABLE telemetry_events (
     id VARCHAR(160) PRIMARY KEY, -- ID convention: TEL-SENSOR-ID-TIMESTAMP
-    sensor_id VARCHAR(128) NOT NULL REFERENCES sensors(id) ON DELETE CASCADE,
+    -- sensor_id is a soft reference (no FK) so UNKNOWN_SENSOR edge-case rows can persist under PostgreSQL.
+    sensor_id VARCHAR(128) NOT NULL,
     machine_id VARCHAR(96) NOT NULL REFERENCES machines(id) ON DELETE CASCADE,
     timestamp TIMESTAMP WITH TIME ZONE NOT NULL,
     value NUMERIC(12, 4) NOT NULL,

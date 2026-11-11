@@ -14,6 +14,7 @@ env.bak/
 venv.bak/
 
 # Database
+*.sqlite
 *.sqlite3
 *.db
 data/processed/*.parquet
@@ -22,6 +23,7 @@ data/processed/*.csv
 # Machine Learning Artifacts
 backend/app/ml/saved_models/*.joblib
 backend/app/ml/saved_models/*.pkl
+!backend/app/ml/saved_models/failure_prediction_rf.joblib
 
 # Node / Frontend
 node_modules/
@@ -36,3 +38,11 @@ yarn-debug.log*
 yarn-error.log*
 .DS_Store
 Thumbs.db
+
+
+# Test, coverage and editor artifacts
+.pytest_cache/
+.coverage
+htmlcov/
+.vscode/
+.idea/

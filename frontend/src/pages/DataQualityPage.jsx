@@ -11,6 +11,7 @@ import {
   FileText
 } from 'lucide-react';
 import api from '../services/api';
+import StatusBadge from '../components/StatusBadge';
 
 export default function DataQualityPage() {
   const [report, setReport] = useState(null);
@@ -150,33 +151,45 @@ export default function DataQualityPage() {
         </div>
       </div>
 
-      {/* Relational Integrity Checklist */}
+      {/* Relational Integrity Checklist (from validation report) */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <div className="p-4 bg-slate-900 border border-slate-800 rounded-xl flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <CheckCircle2 className="h-6 w-6 text-emerald-400 shrink-0" />
-            <div>
-              <h4 className="text-xs font-semibold text-white">Foreign Key Integrity Across Entities</h4>
-              <p className="text-[11px] text-slate-400">Plants, Lines, Machines, Sensors, Work Orders</p>
-            </div>
-          </div>
-          <span className="font-mono text-xs px-2.5 py-1 bg-emerald-500/20 text-emerald-400 rounded font-semibold">
-            0 Violations
-          </span>
-        </div>
+        {(() => {
+          const fkCount = report?.breakdown_by_category?.foreign_key_violations ?? 0;
+          const dupCount = report?.breakdown_by_category?.duplicate_records ?? 0;
+          return (
+            <>
+              <div className="p-4 bg-slate-900 border border-slate-800 rounded-xl flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  {fkCount === 0
+                    ? <CheckCircle2 className="h-6 w-6 text-emerald-400 shrink-0" />
+                    : <XCircle className="h-6 w-6 text-amber-400 shrink-0" />}
+                  <div>
+                    <h4 className="text-xs font-semibold text-white">Foreign Key Integrity Across Entities</h4>
+                    <p className="text-[11px] text-slate-400">Plants, Lines, Machines, Sensors, Work Orders</p>
+                  </div>
+                </div>
+                <span className={`font-mono text-xs px-2.5 py-1 rounded font-semibold ${fkCount === 0 ? 'bg-emerald-500/20 text-emerald-400' : 'bg-amber-500/20 text-amber-400'}`}>
+                  {fkCount} Violation{fkCount === 1 ? '' : 's'}
+                </span>
+              </div>
 
-        <div className="p-4 bg-slate-900 border border-slate-800 rounded-xl flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <CheckCircle2 className="h-6 w-6 text-emerald-400 shrink-0" />
-            <div>
-              <h4 className="text-xs font-semibold text-white">Primary Key & Duplicate Telemetry Check</h4>
-              <p className="text-[11px] text-slate-400">Unique timestamps per sensor, non-overwriting</p>
-            </div>
-          </div>
-          <span className="font-mono text-xs px-2.5 py-1 bg-emerald-500/20 text-emerald-400 rounded font-semibold">
-            0 Duplicates
-          </span>
-        </div>
+              <div className="p-4 bg-slate-900 border border-slate-800 rounded-xl flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  {dupCount === 0
+                    ? <CheckCircle2 className="h-6 w-6 text-emerald-400 shrink-0" />
+                    : <XCircle className="h-6 w-6 text-amber-400 shrink-0" />}
+                  <div>
+                    <h4 className="text-xs font-semibold text-white">Primary Key & Duplicate Telemetry Check</h4>
+                    <p className="text-[11px] text-slate-400">Unique timestamps per sensor, non-overwriting</p>
+                  </div>
+                </div>
+                <span className={`font-mono text-xs px-2.5 py-1 rounded font-semibold ${dupCount === 0 ? 'bg-emerald-500/20 text-emerald-400' : 'bg-amber-500/20 text-amber-400'}`}>
+                  {dupCount} Duplicate{dupCount === 1 ? '' : 's'}
+                </span>
+              </div>
+            </>
+          );
+        })()}
       </div>
 
       {/* Exceptions Audit Table */}
@@ -220,30 +233,14 @@ export default function DataQualityPage() {
                     <span className="font-mono text-[11px] text-blue-400 font-semibold">{e.issue_type}</span>
                   </td>
                   <td className="py-3 px-3">
-                    <span
-                      className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                        e.severity === 'CRITICAL'
-                          ? 'bg-rose-500/20 text-rose-400'
-                          : 'bg-amber-500/20 text-amber-400'
-                      }`}
-                    >
-                      {e.severity}
-                    </span>
+                    <StatusBadge type="severity" value={e.severity} size="xs" />
                   </td>
                   <td className="py-3 px-3 font-mono text-slate-400">{e.related_entity_id}</td>
                   <td className="py-3 px-3 text-slate-300 max-w-sm truncate" title={e.description}>
                     {e.description}
                   </td>
                   <td className="py-3 px-3">
-                    <span
-                      className={`px-2 py-0.5 rounded text-[10px] font-semibold ${
-                        e.resolution_status === 'RESOLVED'
-                          ? 'bg-emerald-500/20 text-emerald-400'
-                          : 'bg-rose-500/20 text-rose-400'
-                      }`}
-                    >
-                      {e.resolution_status}
-                    </span>
+                    <StatusBadge type="resolution" value={e.resolution_status} size="xs" />
                   </td>
                   <td className="py-3 px-3 text-right">
                     {e.resolution_status !== 'RESOLVED' ? (
@@ -268,3 +265,4 @@ export default function DataQualityPage() {
     </div>
   );
 }
+

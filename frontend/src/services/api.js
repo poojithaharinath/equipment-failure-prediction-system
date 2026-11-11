@@ -24,7 +24,7 @@ export const api = {
   getMachines: (params) => client.get('/machines', { params }).then(res => res.data),
   getMachine: (machineId) => client.get(`/machines/${machineId}`).then(res => res.data),
   getMachineSensors: (machineId) => client.get(`/machines/${machineId}/sensors`).then(res => res.data),
-  getMachineHealthHistory: (machineId) => client.get(`/machines/${machineId}/health-history`).then(res => res.data),
+  getMachineHealthHistory: (machineId, limit = 50) => client.get(`/machines/${machineId}/health-history`, { params: { limit } }).then(res => res.data),
   updateMachine: (machineId, data) => client.patch(`/machines/${machineId}`, data).then(res => res.data),
 
   // Telemetry

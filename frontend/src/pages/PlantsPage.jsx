@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Factory, Layers, Cpu, ArrowRight, CheckCircle2, MapPin, Zap } from 'lucide-react';
 import api from '../services/api';
+import StatusBadge from '../components/StatusBadge';
 
 export default function PlantsPage({ setSelectedMachineId, setActiveTab }) {
   const [plants, setPlants] = useState([]);
@@ -186,17 +187,7 @@ export default function PlantsPage({ setSelectedMachineId, setActiveTab }) {
                     <td className="py-3 px-3 font-mono text-slate-400">{m.model_number}</td>
                     <td className="py-3 px-3 font-mono text-slate-400">{m.serial_number}</td>
                     <td className="py-3 px-3">
-                      <span
-                        className={`px-2 py-0.5 rounded text-[10px] font-semibold ${
-                          m.criticality === 'CRITICAL'
-                            ? 'bg-rose-500/20 text-rose-400'
-                            : m.criticality === 'HIGH'
-                            ? 'bg-amber-500/20 text-amber-400'
-                            : 'bg-blue-500/20 text-blue-400'
-                        }`}
-                      >
-                        {m.criticality}
-                      </span>
+                      <StatusBadge type="criticality" value={m.criticality} size="xs" />
                     </td>
                     <td className="py-3 px-3">
                       <span
@@ -212,17 +203,7 @@ export default function PlantsPage({ setSelectedMachineId, setActiveTab }) {
                       </span>
                     </td>
                     <td className="py-3 px-3">
-                      <span
-                        className={`px-2 py-0.5 rounded text-[10px] font-semibold ${
-                          m.status === 'OPERATIONAL'
-                            ? 'bg-emerald-500/20 text-emerald-400'
-                            : m.status === 'DEGRADED'
-                            ? 'bg-amber-500/20 text-amber-400'
-                            : 'bg-rose-500/20 text-rose-400'
-                        }`}
-                      >
-                        {m.status}
-                      </span>
+                      <StatusBadge type="status" value={m.status} size="xs" />
                     </td>
                     <td className="py-3 px-3 text-right">
                       <button
@@ -242,3 +223,4 @@ export default function PlantsPage({ setSelectedMachineId, setActiveTab }) {
     </div>
   );
 }
+

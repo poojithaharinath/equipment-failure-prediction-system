@@ -25,12 +25,12 @@ def train_and_evaluate_models():
     try:
         extractor = FeatureExtractor(db)
         # Use 1.0 day time step for rich dataset
-        df = extractor.build_chronological_dataset(time_step_days=1.0, prediction_horizon_hours=24)
+        df = extractor.build_chronological_dataset(time_step_days=1.0, prediction_horizon_hours=settings.PREDICTION_HORIZON_HOURS)
 
         # Save processed feature matrix
-        os.makedirs("data/processed", exist_ok=True)
-        csv_path = "data/processed/feature_matrix.csv"
-        df.to_csv(csv_path, index=False)
+        csv_path = settings.feature_matrix_file
+        os.makedirs(os.path.dirname(csv_path), exist_ok=True)
+        df.to_csv(csv_path, index=False, lineterminator="\n")
         logger.info(f"Processed feature matrix saved to {csv_path}")
 
         # Chronological Split: 75% train (earlier), 25% test (later)
@@ -131,14 +131,14 @@ def train_and_evaluate_models():
             "trained_at": datetime.utcnow().isoformat(),
             "metrics": rf_metrics,
             "random_seed": settings.RANDOM_SEED,
-            "prediction_horizon_hours": 24,
+            "prediction_horizon_hours": settings.PREDICTION_HORIZON_HOURS,
             "threshold_low": settings.RISK_THRESHOLD_LOW,
             "threshold_high": settings.RISK_THRESHOLD_HIGH
         }
 
-        os.makedirs(os.path.dirname(settings.MODEL_PATH), exist_ok=True)
-        joblib.dump(model_bundle, settings.MODEL_PATH)
-        logger.info(f"Model bundle saved to {settings.MODEL_PATH}")
+        os.makedirs(os.path.dirname(settings.model_file), exist_ok=True)
+        joblib.dump(model_bundle, settings.model_file)
+        logger.info(f"Model bundle saved to {settings.model_file}")
 
         # Combined Evaluation Report
         evaluation_report = {
@@ -157,8 +157,8 @@ def train_and_evaluate_models():
             }
         }
 
-        os.makedirs("data/reports", exist_ok=True)
-        report_path = "data/reports/model_evaluation_report.json"
+        report_path = settings.metrics_file
+        os.makedirs(os.path.dirname(report_path), exist_ok=True)
         with open(report_path, "w") as f:
             json.dump(evaluation_report, f, indent=2)
         logger.info(f"Model evaluation report saved to {report_path}")
@@ -172,3 +172,4 @@ if __name__ == "__main__":
     rep = train_and_evaluate_models()
     print("Model Training & Evaluation Report:")
     print(json.dumps(rep, indent=2))
+

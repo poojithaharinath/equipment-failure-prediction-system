@@ -11,6 +11,8 @@ import {
   X
 } from 'lucide-react';
 import api from '../services/api';
+import StatusBadge from '../components/StatusBadge';
+import { getProbabilityBarColor } from '../utils/formatters';
 
 export default function PredictionsPage({ setSelectedMachineId, setActiveTab }) {
   const [predictions, setPredictions] = useState([]);
@@ -195,13 +197,7 @@ export default function PredictionsPage({ setSelectedMachineId, setActiveTab }) 
                         <div className="flex items-center gap-2">
                           <div className="w-16 bg-slate-800 rounded-full h-1.5 overflow-hidden">
                             <div
-                              className={`h-full rounded-full ${
-                                p.failure_probability_pct > 70
-                                  ? 'bg-rose-500'
-                                  : p.failure_probability_pct > 35
-                                  ? 'bg-amber-500'
-                                  : 'bg-emerald-500'
-                              }`}
+                              className={`h-full rounded-full ${getProbabilityBarColor(p.failure_probability_pct)}`}
                               style={{ width: `${Math.min(100, p.failure_probability_pct)}%` }}
                             />
                           </div>
@@ -211,17 +207,7 @@ export default function PredictionsPage({ setSelectedMachineId, setActiveTab }) 
                         </div>
                       </td>
                       <td className="py-2.5 px-3">
-                        <span
-                          className={`px-2 py-0.5 rounded text-[10px] font-semibold ${
-                            p.risk_category === 'High Risk'
-                              ? 'bg-rose-500/20 text-rose-400'
-                              : p.risk_category === 'Medium Risk'
-                              ? 'bg-amber-500/20 text-amber-400'
-                              : 'bg-emerald-500/20 text-emerald-400'
-                          }`}
-                        >
-                          {p.risk_category}
-                        </span>
+                        <StatusBadge type="risk" value={p.risk_category} size="xs" />
                       </td>
                       <td className="py-2.5 px-3 text-right">
                         <button
@@ -321,3 +307,4 @@ export default function PredictionsPage({ setSelectedMachineId, setActiveTab }) 
     </div>
   );
 }
+

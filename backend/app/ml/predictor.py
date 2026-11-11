@@ -4,7 +4,6 @@ import logging
 from datetime import datetime
 from typing import Dict, List, Optional, Any, Tuple
 import joblib
-import numpy as np
 import pandas as pd
 from sqlalchemy.orm import Session
 from sqlalchemy import func
@@ -17,35 +16,54 @@ from backend.app.ml.feature_engineering import FeatureExtractor, FEATURE_COLUMNS
 
 logger = logging.getLogger(__name__)
 
+
+class ModelNotAvailableError(RuntimeError):
+    """Raised when the trained model bundle is missing or cannot be loaded."""
+
+
+def load_model_bundle(model_path: Optional[str] = None) -> Dict[str, Any]:
+    path = model_path or settings.model_file
+    if not os.path.exists(path):
+        raise ModelNotAvailableError(
+            f"Trained model not found at {path}. Run `python -m backend.app.ml.train` to create it."
+        )
+    try:
+        bundle = joblib.load(path)
+    except Exception as e:
+        raise ModelNotAvailableError(f"Could not load trained model from {path}: {e}") from e
+    if not isinstance(bundle, dict) or bundle.get("model") is None:
+        raise ModelNotAvailableError(f"Model file {path} does not contain a trained model bundle.")
+    return bundle
+
+
+def get_model_status() -> Dict[str, Any]:
+    try:
+        bundle = load_model_bundle()
+    except ModelNotAvailableError as e:
+        return {"status": "UNAVAILABLE", "path": settings.model_file, "error": str(e)}
+    return {
+        "status": "LOADED",
+        "path": settings.model_file,
+        "model_type": type(bundle["model"]).__name__,
+        "trained_at": bundle.get("trained_at"),
+    }
+
+
 class FailurePredictor:
     """
     Inference and Explainable AI Service for Equipment Failure Prediction.
+    Raises ModelNotAvailableError when no trained model can be loaded.
     """
 
     def __init__(self, db: Session, model_path: Optional[str] = None):
         self.db = db
-        self.model_path = model_path or settings.MODEL_PATH
-        self.bundle = None
-        self.model = None
-        self.feature_columns = FEATURE_COLUMNS
-        self.threshold_low = settings.RISK_THRESHOLD_LOW
-        self.threshold_high = settings.RISK_THRESHOLD_HIGH
-        self._load_model()
-
-    def _load_model(self):
-        if os.path.exists(self.model_path):
-            try:
-                self.bundle = joblib.load(self.model_path)
-                self.model = self.bundle.get("model")
-                self.feature_columns = self.bundle.get("feature_columns", FEATURE_COLUMNS)
-                self.threshold_low = self.bundle.get("threshold_low", settings.RISK_THRESHOLD_LOW)
-                self.threshold_high = self.bundle.get("threshold_high", settings.RISK_THRESHOLD_HIGH)
-                logger.info(f"Loaded trained ML model from {self.model_path}")
-            except Exception as e:
-                logger.warning(f"Could not load ML model from {self.model_path}: {e}")
-                self.model = None
-        else:
-            logger.warning(f"No trained model found at {self.model_path}. Inference will use heuristic fallback until training.")
+        self.model_path = model_path or settings.model_file
+        self.bundle = load_model_bundle(self.model_path)
+        self.model = self.bundle["model"]
+        self.feature_columns = self.bundle.get("feature_columns", FEATURE_COLUMNS)
+        self.threshold_low = self.bundle.get("threshold_low", settings.RISK_THRESHOLD_LOW)
+        self.threshold_high = self.bundle.get("threshold_high", settings.RISK_THRESHOLD_HIGH)
+        logger.info(f"Loaded trained ML model from {self.model_path}")
 
     def explain_prediction(self, features: Dict[str, float], prob: float) -> Tuple[List[Dict[str, Any]], str]:
         contributing_factors = []
@@ -124,17 +142,8 @@ class FailurePredictor:
         extractor = FeatureExtractor(self.db)
         feats = extractor.extract_features_for_machine_at_time(machine, as_of)
 
-        if self.model:
-            # Model prediction
-            X_df = pd.DataFrame([feats])[self.feature_columns]
-            prob = float(self.model.predict_proba(X_df)[0][1])
-        else:
-            # Heuristic calculation based on vibration, temp, and health score
-            vib_score = min(1.0, max(0.0, (feats["avg_vibration_24h"] - 2.0) / 4.0))
-            temp_score = min(1.0, max(0.0, (feats["avg_temperature_24h"] - 68.0) / 25.0))
-            trend_score = min(1.0, max(0.0, (feats["vibration_trend"] - 1.0) / 1.0))
-            prob = float(0.4 * vib_score + 0.35 * temp_score + 0.25 * trend_score)
-
+        X_df = pd.DataFrame([feats])[self.feature_columns]
+        prob = float(self.model.predict_proba(X_df)[0][1])
         prob = min(0.9999, max(0.0001, prob))
         prob_pct = round(prob * 100.0, 2)
 
@@ -151,7 +160,7 @@ class FailurePredictor:
         log_entry = FailurePredictionLog(
             machine_id=machine.id,
             prediction_timestamp=as_of,
-            target_horizon_hours=24,
+            target_horizon_hours=settings.PREDICTION_HORIZON_HOURS,
             failure_probability=round(prob, 4),
             risk_category=risk_category,
             contributing_factors=json.dumps(factors),
@@ -193,7 +202,7 @@ class FailurePredictor:
             "machine_type": machine.machine_type,
             "line_id": machine.line_id,
             "prediction_timestamp": as_of.isoformat(),
-            "target_horizon_hours": 24,
+            "target_horizon_hours": settings.PREDICTION_HORIZON_HOURS,
             "failure_probability_pct": prob_pct,
             "risk_category": risk_category,
             "health_score": new_health_score,

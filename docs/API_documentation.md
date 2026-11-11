@@ -10,14 +10,17 @@
 ## 1. System & Health Endpoints
 
 ### `GET /health`
-Returns system operational health.
+Runs `SELECT 1` against the configured database and loads the model artifact. Returns `200` when both succeed, otherwise `503` with `"status": "UNHEALTHY"` and an `error` on the failing component.
 ```json
 {
   "status": "HEALTHY",
-  "database": "CONNECTED",
+  "database": {"backend": "postgresql", "status": "CONNECTED"},
+  "model": {"status": "LOADED", "path": "/app/backend/app/ml/saved_models/failure_prediction_rf.joblib", "model_type": "RandomForestClassifier", "trained_at": "..."},
   "version": "1.0.0"
 }
 ```
+
+Prediction endpoints return `503` with `"error": "MODEL_NOT_AVAILABLE"` when the model artifact is missing; there is no heuristic fallback.
 
 ---
 
@@ -190,7 +193,9 @@ Executes automated integrity suite and tests all 5 negative scenarios.
 Returns data quality report summary.
 
 ### `GET /api/alerts`
-Returns list of unresolved exceptions, unknown sensor events, and out-of-range readings.
+Returns a paginated list of validation exceptions (unknown sensor events, out-of-range readings, etc.), newest first.
+- Parameters: `severity`, `resolution_status`, `issue_type`, `page` (default 1), `page_size` (default 50, max 200).
+- Response: `{"items": [...], "total", "page", "page_size", "total_pages"}`, the same shape as `GET /api/validation/exceptions`.
 
 ### `PATCH /api/alerts/{issue_id}`
 Updates resolution status (`RESOLVED`, `UNDER_REVIEW`, `DISMISSED`).
@@ -204,3 +209,26 @@ Returns accuracy, precision, recall, F1-score, ROC-AUC, confusion matrix, and fe
 
 ### `POST /api/model-evaluation/train`
 Triggers full chronological retraining of Random Forest Champion and Logistic Regression Baseline.
+
+---
+
+## 9. Additional Endpoints
+
+| Method | Path | Notes |
+|---|---|---|
+| GET | `/api/sensors`, `/api/sensors/{sensor_id}` | Sensor catalog |
+| GET | `/api/technicians` | Technician list (filter: specialization, status) |
+| GET | `/api/parts` | Parts inventory (filter: category, low_stock_only) |
+| GET | `/api/failure-events` | Paginated failure history |
+| GET | `/api/failure-events/summary` | Failure-mode aggregates |
+| GET | `/api/alerts/metrics` | Alert counts by type/severity |
+| GET | `/api/machines/{id}/health-history` | Status/health audit trail (`limit`) |
+| PATCH | `/api/machines/{id}` | Update machine fields / restore |
+| GET | `/api/telemetry` | Paginated telemetry |
+| GET | `/api/telemetry/machine/{id}/latest` | Latest reading per sensor |
+| POST | `/api/telemetry` | Ingest a telemetry event |
+| GET | `/api/validation/exceptions` | Paginated validation exceptions |
+| PATCH | `/api/validation/exceptions/{id}` | Resolve an exception |
+| GET | `/api/production-lines` | Production line list |
+| GET | `/api/plants/{id}`, `/api/production-lines/{id}` | Detail GETs |
+

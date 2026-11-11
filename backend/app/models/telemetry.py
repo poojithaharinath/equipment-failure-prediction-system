@@ -7,7 +7,8 @@ class TelemetryEvent(Base):
     __tablename__ = "telemetry_events"
 
     id = Column(String(160), primary_key=True)  # TEL-SENSOR-ID-TIMESTAMP
-    sensor_id = Column(String(128), ForeignKey("sensors.id", ondelete="CASCADE"), nullable=False)
+    # Soft reference (no FK): allows intentional UNKNOWN_SENSOR telemetry for data-quality edge cases.
+    sensor_id = Column(String(128), nullable=False, index=True)
     machine_id = Column(String(96), ForeignKey("machines.id", ondelete="CASCADE"), nullable=False)
     timestamp = Column(DateTime, nullable=False, index=True)
     value = Column(Float, nullable=False)
@@ -23,5 +24,10 @@ class TelemetryEvent(Base):
     )
 
     # Relationships
-    sensor = relationship("Sensor", back_populates="telemetry_events")
+    sensor = relationship(
+        "Sensor",
+        primaryjoin="TelemetryEvent.sensor_id==Sensor.id",
+        foreign_keys=[sensor_id],
+        viewonly=True,
+    )
     machine = relationship("Machine", back_populates="telemetry_events")

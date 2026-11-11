@@ -104,12 +104,6 @@ export default function AppLayout({ activeTab, setActiveTab, children }) {
           </div>
 
           <div className="flex items-center space-x-3">
-            <span className="text-xs font-mono px-2.5 py-1 rounded bg-slate-800 text-slate-300 border border-slate-700">
-              API: REST (FastAPI)
-            </span>
-            <span className="text-xs font-mono px-2.5 py-1 rounded bg-slate-800 text-slate-300 border border-slate-700">
-              DB: PostgreSQL / SQLite
-            </span>
             <button
               onClick={() => window.location.reload()}
               title="Refresh Dashboard"

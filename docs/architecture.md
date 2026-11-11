@@ -22,7 +22,7 @@ flowchart TD
     end
 
     subgraph Storage ["Database & Storage Tier"]
-        PG[(PostgreSQL / SQLite Database)]
+        PG[(PostgreSQL Database)]
         Alembic[Alembic Database Migrations]
         ModelsRepo[Saved ML Model Artifacts]
         ReportsRepo[JSON & CSV Reports / Ground Truth]
@@ -63,7 +63,7 @@ flowchart TD
 ### Backend Layer (`backend/`)
 - Built with **Python 3.11/3.13**, **FastAPI**, **Pydantic v2**, and **SQLAlchemy 2.0**.
 - OpenAPI / Swagger documentation exposed at `/docs` and `/redoc`.
-- Asynchronous connection pool management with automatic graceful fallback between PostgreSQL and SQLite.
+- Connection pooling with pre-ping; the configured `DATABASE_URL` is used as-is, and `/health` reports a real `SELECT 1` result.
 - Strict Pydantic request/response validation with HTTP status codes and error handlers.
 
 ### Machine Learning Engine (`backend/app/ml/`)
@@ -73,7 +73,7 @@ flowchart TD
 - **Explainability**: Quantifies individual feature deviations against baseline and computes percentage attribution for operator transparency.
 
 ### Database Layer (`database/`)
-- PostgreSQL DDL (`schema.sql`) and Alembic migration scripts (`001_initial_schema.py`).
+- Alembic migration scripts (`001_initial_schema.py`, the applied schema) and a PostgreSQL DDL reference copy (`schema.sql`).
 - 10 main business entities with immutable IDs, cascade rules, and compound B-tree indexes for time-series range lookups.
 
 ---
@@ -87,3 +87,4 @@ flowchart TD
 5. **Categorization**: Probabilities are mapped into Low Risk (<35%), Medium Risk (35-70%), and High Risk (>70%).
 6. **Persistence**: Inferences are logged to `failure_prediction_logs` and machine health scores are updated dynamically.
 7. **Action**: If a machine reaches High Risk, an emergency work order can be created directly from the dashboard, allocating technicians and replacement parts.
+

@@ -4,6 +4,7 @@ from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
+from backend.app.core.config import settings
 from backend.app.core.database import get_db
 from backend.app.models.validation import DataValidationException
 from backend.app.validation.validator import DataValidator
@@ -17,8 +18,8 @@ def trigger_validation(db: Session = Depends(get_db)):
     validator = DataValidator(db)
     report = validator.run_all_validations()
 
-    os.makedirs("data/reports", exist_ok=True)
-    report_path = "data/reports/validation_report.json"
+    report_path = settings.validation_report_file
+    os.makedirs(os.path.dirname(report_path), exist_ok=True)
     with open(report_path, "w") as f:
         json.dump(report, f, indent=2)
 
@@ -26,7 +27,7 @@ def trigger_validation(db: Session = Depends(get_db)):
 
 @router.get("/report")
 def get_validation_report(db: Session = Depends(get_db)):
-    report_path = "data/reports/validation_report.json"
+    report_path = settings.validation_report_file
     if os.path.exists(report_path):
         try:
             with open(report_path, "r") as f:
@@ -81,3 +82,4 @@ def resolve_exception(
     db.commit()
     db.refresh(exc)
     return exc
+

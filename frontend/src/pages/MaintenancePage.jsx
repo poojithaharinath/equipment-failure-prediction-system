@@ -11,6 +11,8 @@ import {
   Search
 } from 'lucide-react';
 import api from '../services/api';
+import StatusBadge from '../components/StatusBadge';
+import { formatCurrency } from '../utils/formatters';
 
 export default function MaintenancePage() {
   const [workOrders, setWorkOrders] = useState([]);
@@ -196,36 +198,16 @@ export default function MaintenancePage() {
                   </td>
                   <td className="py-3 px-3 text-slate-300">{wo.work_order_type}</td>
                   <td className="py-3 px-3">
-                    <span
-                      className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                        wo.priority === 'CRITICAL'
-                          ? 'bg-rose-500/20 text-rose-400'
-                          : wo.priority === 'HIGH'
-                          ? 'bg-amber-500/20 text-amber-400'
-                          : 'bg-blue-500/20 text-blue-400'
-                      }`}
-                    >
-                      {wo.priority}
-                    </span>
+                    <StatusBadge type="priority" value={wo.priority} size="xs" />
                   </td>
                   <td className="py-3 px-3 text-slate-300">{wo.lead_technician_name || 'Unassigned'}</td>
                   <td className="py-3 px-3">
-                    <span
-                      className={`px-2 py-0.5 rounded text-[10px] font-semibold ${
-                        wo.status === 'COMPLETED'
-                          ? 'bg-emerald-500/20 text-emerald-400'
-                          : wo.status === 'IN_PROGRESS'
-                          ? 'bg-amber-500/20 text-amber-400'
-                          : 'bg-slate-500/20 text-slate-400'
-                      }`}
-                    >
-                      {wo.status}
-                    </span>
+                    <StatusBadge type="status" value={wo.status} size="xs" />
                   </td>
                   <td className="py-3 px-3 font-mono text-slate-300">
                     {wo.downtime_minutes > 0 ? `${wo.downtime_minutes} min` : '--'}
                   </td>
-                  <td className="py-3 px-3 font-mono text-slate-300">${wo.cost.toFixed(2)}</td>
+                  <td className="py-3 px-3 font-mono text-slate-300">{formatCurrency(wo.cost)}</td>
                   <td className="py-3 px-3 text-right">
                     <button
                       onClick={() => openUpdateModal(wo)}
@@ -479,3 +461,4 @@ export default function MaintenancePage() {
     </div>
   );
 }
+

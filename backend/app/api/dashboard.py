@@ -1,5 +1,3 @@
-from datetime import datetime, timedelta
-from typing import Dict, List, Any
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from sqlalchemy import func
@@ -8,10 +6,10 @@ from backend.app.core.database import get_db
 from backend.app.models.plant import Plant
 from backend.app.models.production_line import ProductionLine
 from backend.app.models.machine import Machine
-from backend.app.models.audit import FailurePredictionLog
 from backend.app.models.validation import DataValidationException
 from backend.app.models.failure import FailureEvent
 from backend.app.models.work_order import MaintenanceWorkOrder
+from backend.app.services.machine_service import compute_health_distribution, get_latest_prediction
 
 router = APIRouter(prefix="/dashboard", tags=["Dashboard Analytics"])
 
@@ -31,31 +29,10 @@ def get_dashboard_stats(db: Session = Depends(get_db)):
     high_risk_count = 0
     low_risk_count = 0
 
-    # Health distribution buckets
-    health_distribution = {
-        "0-20%": 0,
-        "21-40%": 0,
-        "41-60%": 0,
-        "61-80%": 0,
-        "81-100%": 0
-    }
+    health_distribution = compute_health_distribution(machines)
 
     for m in machines:
-        score = m.health_score
-        if score <= 20:
-            health_distribution["0-20%"] += 1
-        elif score <= 40:
-            health_distribution["21-40%"] += 1
-        elif score <= 60:
-            health_distribution["41-60%"] += 1
-        elif score <= 80:
-            health_distribution["61-80%"] += 1
-        else:
-            health_distribution["81-100%"] += 1
-
-        pred = db.query(FailurePredictionLog).filter(
-            FailurePredictionLog.machine_id == m.id
-        ).order_by(FailurePredictionLog.prediction_timestamp.desc()).first()
+        pred = get_latest_prediction(db, m.id)
 
         risk = pred.risk_category if pred else ("High Risk" if m.health_score < 40 else "Medium Risk" if m.health_score < 75 else "Low Risk")
         prob = round(pred.failure_probability * 100, 1) if pred else round(100.0 - m.health_score, 1)
@@ -123,3 +100,4 @@ def get_dashboard_stats(db: Session = Depends(get_db)):
         "recent_alerts": alerts_data,
         "machines_requiring_attention": high_risk_machines[:6]
     }
+

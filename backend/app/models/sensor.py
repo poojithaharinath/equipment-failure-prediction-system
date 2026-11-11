@@ -21,4 +21,9 @@ class Sensor(Base):
 
     # Relationships
     machine = relationship("Machine", back_populates="sensors")
-    telemetry_events = relationship("TelemetryEvent", back_populates="sensor", cascade="all, delete-orphan")
+    telemetry_events = relationship(
+        "TelemetryEvent",
+        primaryjoin="Sensor.id==TelemetryEvent.sensor_id",
+        foreign_keys="TelemetryEvent.sensor_id",
+        viewonly=True,
+    )

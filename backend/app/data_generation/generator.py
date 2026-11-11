@@ -22,7 +22,6 @@ from backend.app.models.technician import Technician
 from backend.app.models.part import Part
 from backend.app.models.work_order import MaintenanceWorkOrder, WorkOrderPart, WorkOrderTechnician
 from backend.app.models.failure import FailureEvent
-from backend.app.models.audit import MachineHealthAuditTrail
 from backend.app.validation.validator import DataValidator
 
 logging.basicConfig(level=logging.INFO)
@@ -322,7 +321,7 @@ class SyntheticDataGenerator:
             wo_start = fail_timestamp + timedelta(minutes=self.random.randint(15, 45))
             wo_end = wo_start + timedelta(hours=downtime_hours)
 
-            # Edge Case 4 injection: Inverted maintenance timestamps for 2 work orders
+            # Edge Case 4 injection: Inverted maintenance timestamps (one deliberate work order)
             if idx == 7: # Injection
                 wo_end = wo_start - timedelta(hours=2.5) # actual_end_time earlier than start!
 
@@ -440,7 +439,6 @@ class SyntheticDataGenerator:
         }
 
         telemetry_counter = 1
-        edge_case_injected = False
 
         for m_idx, machine in enumerate(self.machines):
             m_sensors = sensors_by_machine.get(machine.id, {})
@@ -564,11 +562,11 @@ class SyntheticDataGenerator:
                     telemetry_counter += 1
 
     def save_ground_truth(self):
-        logger.info("Saving ground truth dataset to data/ground_truth/ground_truth.csv...")
-        os.makedirs("data/ground_truth", exist_ok=True)
+        gt_path = settings.ground_truth_file
+        logger.info(f"Saving ground truth dataset to {gt_path}...")
+        os.makedirs(os.path.dirname(gt_path), exist_ok=True)
         gt_df = pd.DataFrame(self.ground_truth_records)
-        gt_path = os.path.abspath("data/ground_truth/ground_truth.csv")
-        gt_df.to_csv(gt_path, index=False)
+        gt_df.to_csv(gt_path, index=False, lineterminator="\n")
         logger.info(f"Ground truth saved: {len(gt_df)} failure ground truth records at {gt_path}")
 
     def populate_database(self, batch_size: int = 2000):
@@ -655,8 +653,8 @@ class SyntheticDataGenerator:
             # Run validator to capture validation exceptions & edge cases
             validator = DataValidator(self.db)
             report = validator.run_all_validations()
-            os.makedirs("data/reports", exist_ok=True)
-            report_path = os.path.abspath("data/reports/validation_report.json")
+            report_path = settings.validation_report_file
+            os.makedirs(os.path.dirname(report_path), exist_ok=True)
             with open(report_path, "w") as f:
                 json.dump(report, f, indent=2)
             logger.info(f"Validation report saved: {report_path}")
@@ -675,10 +673,16 @@ class SyntheticDataGenerator:
         }
 
 if __name__ == "__main__":
+    import argparse
+    parser = argparse.ArgumentParser(description="Industrial Synthetic Data Generator for Predictive Maintenance")
+    parser.add_argument("--mode", choices=["starter", "full"], default="starter", help="Generation mode ('starter' or 'full')")
+    parser.add_argument("--seed", type=int, default=20261022, help="Fixed random seed (default: 20261022)")
+    args = parser.parse_args()
+
     init_db()
     db = SessionLocal()
     try:
-        gen = SyntheticDataGenerator(seed=20261022, mode="starter", db=db)
+        gen = SyntheticDataGenerator(seed=args.seed, mode=args.mode, db=db)
         summary = gen.run()
         print("Data Generation Complete:")
         print(json.dumps(summary, indent=2))

@@ -24,17 +24,36 @@ This database stores telemetry, operating shifts, maintenance work orders, machi
 
 ## Running Migrations and Loading Schema
 ### PostgreSQL via Docker or Local Instance:
+The Alembic migration in `database/migrations/versions/` is the single source of the schema. `database/schema.sql` is a readable PostgreSQL reference copy of the same tables and is not executed by any setup step.
+
+Note: `telemetry_events.sensor_id` is intentionally **not** a foreign key. That lets the generator persist the required `UNKNOWN_SENSOR` edge-case row under PostgreSQL; `machine_id` remains a hard FK.
+
 ```bash
-# 1. Start PostgreSQL container:
-docker-compose up -d db
+# 1. Start PostgreSQL (or use a local instance):
+docker compose up -d db
 
-# 2. Apply PostgreSQL schema directly:
-docker exec -i postgres_pm psql -U postgres -d predictive_maintenance < database/schema.sql
+# 2. From the project root, apply the migration:
+python -m alembic upgrade head
 
-# 3. Or apply via Alembic:
-cd backend
-alembic upgrade head
+# Or migrate + generate data + ensure the model in one step:
+python -m backend.app.bootstrap
 ```
 
-### Flexible Development:
-The application dynamically checks `DATABASE_URL`. If a PostgreSQL database is reachable, it uses PostgreSQL. If not, it defaults to the SQLite database `backend/predictive_maintenance.db` so the entire pipeline runs immediately on any local machine.
+### Connection
+The application uses exactly the database in `DATABASE_URL` (default `postgresql://postgres:postgres@localhost:5432/predictive_maintenance`); there is no automatic fallback. If the database is unreachable, `/health` returns `503` and `python -m backend.app.bootstrap` exits non-zero. A SQLite URL also works for a quick local look but is not required.
+
+## Reference Seed Data
+`seed_data/01_seed_reference_data.sql` loads a deterministic PostgreSQL baseline: 3 plants, 12 production lines, 10 machines, 50 sensors, 15 technicians, and 20 spare parts. Inserts use `ON CONFLICT (id) DO NOTHING`, so the script can be applied more than once.
+
+Plant names, line IDs, technician names, and part numbers follow `backend/app/data_generation/generator.py`. Sensor IDs use the generator convention `SNS-<machine_id>-<TYPE>-01`. The 10 machines are a stable reference subset, not a replay of the generator's random serial numbers or health scores. Telemetry, failures, and work orders are not included.
+
+```bash
+psql -U postgres -d predictive_maintenance -f database/seed_data/01_seed_reference_data.sql
+```
+
+The full 100-machine dataset, including telemetry and labelled failures, still comes from:
+
+```bash
+python -m backend.app.data_generation.generator --mode starter --seed 20261022
+```
+

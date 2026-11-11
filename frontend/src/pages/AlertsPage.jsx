@@ -11,6 +11,8 @@ import {
   HelpCircle
 } from 'lucide-react';
 import api from '../services/api';
+import StatusBadge from '../components/StatusBadge';
+import { formatTimestamp } from '../utils/formatters';
 
 export default function AlertsPage() {
   const [alerts, setAlerts] = useState([]);
@@ -30,10 +32,10 @@ export default function AlertsPage() {
     try {
       setLoading(true);
       const [alertsData, metricsData] = await Promise.all([
-        api.getAlerts({ limit: 100 }),
+        api.getAlerts({ page: 1, page_size: 100 }),
         api.getAlertMetrics()
       ]);
-      setAlerts(alertsData);
+      setAlerts(alertsData.items || []);
       setMetrics(metricsData);
     } catch (err) {
       console.error('Failed to load alerts:', err);
@@ -212,37 +214,17 @@ export default function AlertsPage() {
                       </span>
                     </td>
                     <td className="py-3 px-3">
-                      <span
-                        className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                          a.severity === 'CRITICAL'
-                            ? 'bg-rose-500/20 text-rose-400'
-                            : a.severity === 'HIGH'
-                            ? 'bg-amber-500/20 text-amber-400'
-                            : 'bg-blue-500/20 text-blue-400'
-                        }`}
-                      >
-                        {a.severity}
-                      </span>
+                      <StatusBadge type="severity" value={a.severity} size="xs" />
                     </td>
                     <td className="py-3 px-3 font-mono text-slate-400">{a.related_entity_id}</td>
                     <td className="py-3 px-3 text-slate-300 max-w-sm truncate" title={a.description}>
                       {a.description}
                     </td>
                     <td className="py-3 px-3 font-mono text-slate-400 whitespace-nowrap">
-                      {new Date(a.timestamp).toLocaleString()}
+                      {formatTimestamp(a.timestamp)}
                     </td>
                     <td className="py-3 px-3">
-                      <span
-                        className={`px-2 py-0.5 rounded text-[10px] font-semibold ${
-                          a.resolution_status === 'RESOLVED'
-                            ? 'bg-emerald-500/20 text-emerald-400'
-                            : a.resolution_status === 'UNDER_REVIEW'
-                            ? 'bg-indigo-500/20 text-indigo-400'
-                            : 'bg-rose-500/20 text-rose-400'
-                        }`}
-                      >
-                        {a.resolution_status}
-                      </span>
+                      <StatusBadge type="resolution" value={a.resolution_status} size="xs" />
                     </td>
                     <td className="py-3 px-3 text-right whitespace-nowrap">
                       {a.resolution_status !== 'RESOLVED' ? (
@@ -278,3 +260,4 @@ export default function AlertsPage() {
     </div>
   );
 }
+

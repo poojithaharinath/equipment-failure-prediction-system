@@ -17,6 +17,8 @@ import {
   Legend
 } from 'recharts';
 import api from '../services/api';
+import StatusBadge from '../components/StatusBadge';
+import { formatTimestamp } from '../utils/formatters';
 
 export default function FailureHistoryPage() {
   const [failures, setFailures] = useState([]);
@@ -222,7 +224,7 @@ export default function FailureHistoryPage() {
                 <tr key={f.id} className="hover:bg-slate-800/40 transition">
                   <td className="py-3 px-3 font-mono font-medium text-rose-400">{f.id}</td>
                   <td className="py-3 px-3 font-mono text-slate-400 whitespace-nowrap">
-                    {new Date(f.failure_timestamp).toLocaleDateString()} {new Date(f.failure_timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    {formatTimestamp(f.failure_timestamp)}
                   </td>
                   <td className="py-3 px-3">
                     <div className="font-medium text-white">{f.machine_name}</div>
@@ -230,15 +232,7 @@ export default function FailureHistoryPage() {
                   </td>
                   <td className="py-3 px-3 font-medium text-slate-200">{f.failure_type}</td>
                   <td className="py-3 px-3">
-                    <span
-                      className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                        f.severity === 'CRITICAL'
-                          ? 'bg-rose-500/20 text-rose-400'
-                          : 'bg-amber-500/20 text-amber-400'
-                      }`}
-                    >
-                      {f.severity}
-                    </span>
+                    <StatusBadge type="severity" value={f.severity} size="xs" />
                   </td>
                   <td className="py-3 px-3 font-mono text-slate-300">
                     {f.pre_warning_lead_time_hours > 0 ? (
@@ -263,3 +257,4 @@ export default function FailureHistoryPage() {
     </div>
   );
 }
+

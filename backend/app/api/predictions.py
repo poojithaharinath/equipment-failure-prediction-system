@@ -17,7 +17,7 @@ def get_all_predictions(
     limit: int = Query(100, ge=1, le=100),
     db: Session = Depends(get_db)
 ):
-    predictor = FailurePredictor(db)
+    predictor = None
     machines = db.query(Machine).all()
     results = []
 
@@ -45,7 +45,8 @@ def get_all_predictions(
                 "recommendation": latest.recommendations or "Maintain continuous telemetry monitoring."
             }
         else:
-            # Generate on the fly
+            if predictor is None:
+                predictor = FailurePredictor(db)
             res = predictor.predict_for_machine(m.id)
 
         if risk_category and res["risk_category"] != risk_category:
@@ -61,9 +62,10 @@ def get_all_predictions(
 
 @router.get("/machine/{machine_id}", response_model=MachinePredictionResponse)
 def get_machine_prediction(machine_id: str, refresh: bool = False, db: Session = Depends(get_db)):
-    predictor = FailurePredictor(db)
+    if not db.query(Machine.id).filter(Machine.id == machine_id).first():
+        raise HTTPException(status_code=404, detail=f"Machine {machine_id} not found")
     if refresh:
-        return predictor.predict_for_machine(machine_id)
+        return FailurePredictor(db).predict_for_machine(machine_id)
 
     # Check cached prediction log
     latest = db.query(FailurePredictionLog).filter(
@@ -90,7 +92,7 @@ def get_machine_prediction(machine_id: str, refresh: bool = False, db: Session =
             "recommendation": latest.recommendations or "Continue standard monitoring."
         }
     else:
-        return predictor.predict_for_machine(machine_id)
+        return FailurePredictor(db).predict_for_machine(machine_id)
 
 @router.post("/batch-predict")
 def run_batch_predictions(db: Session = Depends(get_db)):
@@ -107,3 +109,4 @@ def run_batch_predictions(db: Session = Depends(get_db)):
         "medium_risk_count": med,
         "low_risk_count": low
     }
+

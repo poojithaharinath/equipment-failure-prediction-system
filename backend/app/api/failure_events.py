@@ -1,13 +1,13 @@
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
-from sqlalchemy import func
 
 from backend.app.core.database import get_db
 from backend.app.models.failure import FailureEvent
 from backend.app.models.machine import Machine
 from backend.app.schemas.entities import FailureEventResponse
 from backend.app.schemas.common import PaginatedResponse
+from backend.app.services.machine_service import get_failure_summary
 
 router = APIRouter(prefix="/failure-events", tags=["Failure Events"])
 
@@ -59,25 +59,5 @@ def get_failure_events(
 
 @router.get("/summary")
 def get_failures_summary(db: Session = Depends(get_db)):
-    total = db.query(func.count(FailureEvent.id)).scalar() or 0
-    total_downtime = db.query(func.sum(FailureEvent.downtime_hours)).scalar() or 0.0
-    avg_downtime = db.query(func.avg(FailureEvent.downtime_hours)).scalar() or 0.0
-    avg_lead = db.query(func.avg(FailureEvent.pre_warning_lead_time_hours)).scalar() or 0.0
+    return get_failure_summary(db)
 
-    by_type = dict(
-        db.query(FailureEvent.failure_type, func.count(FailureEvent.id))
-        .group_by(FailureEvent.failure_type).all()
-    )
-    by_severity = dict(
-        db.query(FailureEvent.severity, func.count(FailureEvent.id))
-        .group_by(FailureEvent.severity).all()
-    )
-
-    return {
-        "total_failures": total,
-        "total_downtime_hours": round(float(total_downtime), 1),
-        "average_downtime_hours": round(float(avg_downtime), 1),
-        "average_lead_time_hours": round(float(avg_lead), 1),
-        "failures_by_type": by_type,
-        "failures_by_severity": by_severity
-    }

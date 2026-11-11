@@ -29,105 +29,95 @@ Built with a clean architectural separation among Frontend, Backend, Database, D
 - **API Client**: Axios
 
 ### Backend
-- **Language**: Python 3.11 / 3.13
+- **Language**: Python 3.11+ (Dockerfile uses 3.11; verified locally on 3.13)
 - **Framework**: FastAPI (Asynchronous REST API)
 - **Validation**: Pydantic v2 & Pydantic-Settings
-- **ORM & Database**: SQLAlchemy 2.0 (PostgreSQL engine with automatic SQLite fallback)
+- **ORM & Database**: SQLAlchemy 2.0 on PostgreSQL
 - **Machine Learning**: Scikit-learn, NumPy, Pandas, Joblib
 - **API Documentation**: OpenAPI / Swagger (`/docs`) & ReDoc (`/redoc`)
 
 ### Database & Migrations
 - **Primary Database**: PostgreSQL 15
-- **Migration Framework**: Alembic (version-controlled migration scripts)
-- **Testing Database**: Seamless SQLite support for standalone zero-dependency local runs
+- **Migration Framework**: Alembic (single source of the schema; `database/schema.sql` is a readable reference copy)
 
 ### DevOps & Testing
-- **Containerization**: Docker & Docker Compose
-- **Testing**: Pytest & FastAPI TestClient
+- **Containerization**: Docker & Docker Compose (optional; local PostgreSQL is enough)
+- **Testing**: Pytest & FastAPI TestClient (independent throwaway database per run)
 
 ---
 
 ## 3. Project Directory Structure
 
 ```text
-predictive-maintenance-system/
-│
-├── frontend/
-│   ├── public/
-│   ├── src/
-│   │   ├── components/
-│   │   ├── pages/               # 9 Dedicated Views
-│   │   │   ├── DashboardPage.jsx
-│   │   │   ├── PlantsPage.jsx
-│   │   │   ├── MachineMonitoringPage.jsx
-│   │   │   ├── PredictionsPage.jsx
-│   │   │   ├── AlertsPage.jsx
-│   │   │   ├── MaintenancePage.jsx
-│   │   │   ├── FailureHistoryPage.jsx
-│   │   │   ├── ModelEvaluationPage.jsx
-│   │   │   └── DataQualityPage.jsx
-│   │   ├── layouts/
-│   │   │   └── AppLayout.jsx    # Sidebar and navigation
-│   │   ├── services/
-│   │   │   └── api.js           # Centralized Axios API client
-│   │   ├── hooks/
-│   │   ├── assets/
-│   │   ├── utils/
-│   │   ├── App.jsx
-│   │   └── main.jsx
-│   ├── package.json
-│   ├── vite.config.js
-│   ├── tailwind.config.js
-│   └── Dockerfile
-│
+<repo>/
 ├── backend/
 │   ├── app/
-│   │   ├── api/                 # 14 REST API Routers
-│   │   ├── models/              # 15 SQLAlchemy Declarative Models
-│   │   ├── schemas/             # Pydantic v2 Request/Response Schemas
-│   │   ├── services/            # Business & operational logic
-│   │   ├── ml/                  # ML Training, Feature Engineering & Predictor
+│   │   ├── api/                 # 14 REST API routers
+│   │   ├── core/                # config.py (settings, path resolution), database.py (engine, health check, migrations)
+│   │   ├── data_generation/
+│   │   │   └── generator.py     # Deterministic synthetic data generator (seed 20261022)
+│   │   ├── ml/
 │   │   │   ├── feature_engineering.py
-│   │   │   ├── train.py
-│   │   │   ├── predictor.py
+│   │   │   ├── train.py         # Random Forest (champion) vs Logistic Regression (baseline)
+│   │   │   ├── predictor.py     # Inference + explainability
 │   │   │   └── saved_models/
-│   │   ├── data_generation/     # Deterministic Synthetic Data Generator
-│   │   │   └── generator.py
-│   │   ├── validation/          # Automated Data Validation Engine
-│   │   │   └── validator.py
-│   │   ├── core/
-│   │   │   ├── config.py
-│   │   │   └── database.py
-│   │   └── main.py              # FastAPI Application Entrypoint
+│   │   │       └── failure_prediction_rf.joblib   # Trained model (committed)
+│   │   ├── models/              # 15 SQLAlchemy models
+│   │   ├── schemas/             # Pydantic v2 request/response schemas
+│   │   ├── services/            # machine_service.py, maintenance_service.py
+│   │   ├── validation/
+│   │   │   └── validator.py     # Data validation / five edge cases
+│   │   ├── bootstrap.py         # Migrate + generate data if empty + train model if missing
+│   │   └── main.py              # FastAPI entrypoint (/health, CORS, routers)
 │   ├── tests/
-│   │   └── test_api.py          # Pytest API Test Suite
-│   ├── requirements.txt
+│   │   ├── conftest.py          # Creates an independent test database per run
+│   │   ├── test_api.py
+│   │   ├── test_ml.py
+│   │   ├── test_reproducibility.py
+│   │   └── test_validation.py
+│   ├── requirements.txt         # Pinned versions (scikit-learn must match the saved model)
 │   ├── Dockerfile
 │   └── .env.example
-│
+├── frontend/
+│   ├── src/
+│   │   ├── components/          # MetricCard.jsx, StatusBadge.jsx
+│   │   ├── hooks/               # useApi.js
+│   │   ├── layouts/             # AppLayout.jsx (sidebar & navigation)
+│   │   ├── pages/               # 9 pages: Dashboard, Plants, MachineMonitoring, Predictions, Alerts,
+│   │   │                        #          Maintenance, FailureHistory, ModelEvaluation, DataQuality
+│   │   ├── services/api.js      # Axios API client
+│   │   ├── utils/formatters.js
+│   │   ├── App.jsx
+│   │   └── main.jsx
+│   ├── index.html
+│   ├── package.json / package-lock.json
+│   ├── vite.config.js           # Dev proxy /api -> http://localhost:8000
+│   ├── tailwind.config.js, postcss.config.js
+│   ├── nginx.conf
+│   └── Dockerfile
 ├── database/
-│   ├── migrations/              # Alembic Database Migrations
-│   │   └── versions/
-│   │       └── 001_initial_schema.py
-│   ├── schema.sql               # Pure PostgreSQL DDL & Indices
-│   ├── seed_data/
+│   ├── migrations/              # Alembic (applied schema)
+│   │   ├── env.py
+│   │   └── versions/001_initial_schema.py
+│   ├── seed_data/01_seed_reference_data.sql
+│   ├── schema.sql               # PostgreSQL DDL reference (schema is applied by Alembic)
 │   └── README.md
-│
 ├── data/
-│   ├── input/
-│   ├── processed/               # Extracted feature matrices
-│   ├── ground_truth/            # Isolated ground_truth.csv
-│   └── reports/                 # validation_report.json & model_evaluation_report.json
-│
+│   ├── ground_truth/ground_truth.csv
+│   └── reports/                 # model_evaluation_report.json, validation_report.json
 ├── docs/
-│   ├── data_dictionary.md       # Comprehensive entity & field dictionary
-│   ├── database_design.md       # ER diagrams, cardinalities & indexes
-│   ├── architecture.md          # 3-tier system architecture & data flow
-│   └── API_documentation.md     # Complete REST endpoints documentation
-│
-├── docker-compose.yml           # Multi-container orchestration
-├── README.md
-└── .gitignore
+│   ├── API_documentation.md
+│   ├── architecture.md
+│   ├── data_dictionary.md
+│   ├── database_design.md
+│   ├── data_generation_instructions.md
+│   └── model_training_instructions.md
+├── alembic.ini
+├── docker-compose.yml           # Optional: PostgreSQL + backend + frontend
+├── .gitattributes               # LF line endings on every OS
+├── .gitignore
+├── .dockerignore
+└── README.md
 ```
 
 ---
@@ -225,63 +215,85 @@ The system does not silently ignore or delete invalid data. All anomalies are fl
 
 ## 9. Quickstart & Execution Instructions
 
-### Option A: Local Direct Execution (Recommended for Fast Testing)
+The repository is self-contained: it ships the Alembic migration, the deterministic data generator, reference seed SQL, and the trained model (`backend/app/ml/saved_models/failure_prediction_rf.joblib`). No pre-existing database is needed.
 
-#### 1. Setup Backend & Generate Data
 ```bash
-# 1. Run database migration (Alembic)
-python -m alembic upgrade head
-
-# 2. Run deterministic synthetic data generator
-python -m backend.app.data_generation.generator
-
-# 3. Train Machine Learning Models
-python -m backend.app.ml.train
-
-# 4. Start FastAPI Backend Server
-python -m uvicorn backend.app.main:app --host 0.0.0.0 --port 8000 --reload
+git clone https://github.com/<your-username>/<repo-name>.git
+cd <repo-name>
 ```
-The backend API and Swagger docs will be live at `http://localhost:8000/docs`.
 
-#### 2. Setup & Run React Frontend
+### Option A: Local Setup with PostgreSQL (Python 3.11–3.13, Node 20+, PostgreSQL 15+)
+
+All commands run from the project root.
+
+```bash
+# 1. Create an empty PostgreSQL database
+createdb -U postgres predictive_maintenance
+
+# 2. Configuration (edit DATABASE_URL if your credentials differ)
+cp backend/.env.example backend/.env        # PowerShell: Copy-Item backend/.env.example backend/.env
+
+# 3. Backend dependencies (a virtual environment is recommended)
+pip install -r backend/requirements.txt
+
+# 4. Apply the migration, generate the seeded dataset, and ensure the model exists
+python -m backend.app.bootstrap
+
+# 5. Start the API (http://localhost:8000/docs, health: http://localhost:8000/health)
+python -m uvicorn backend.app.main:app --port 8000
+```
+
+In a second terminal:
 ```bash
 cd frontend
-npm install
-npm run dev
-```
-The frontend dashboard will be live at `http://localhost:5173`.
-
-#### 3. Run Automated Tests
-```bash
-python -m pytest backend/tests/test_api.py -v
+npm ci
+npm run dev                                  # http://localhost:5173 (proxies /api to :8000)
 ```
 
----
+### Option B (optional): Docker Compose
 
-### Option B: Full Docker Compose Execution (PostgreSQL + Backend + Frontend)
+Docker is not required; it is a one-command alternative that also provides PostgreSQL.
 
 ```bash
-# Start all three services (PostgreSQL 15, FastAPI, React Nginx)
-docker-compose up --build -d
-
-# Check running services
-docker-compose ps
+docker compose up --build -d
+docker compose ps          # wait until backend_pm is "healthy" (first start generates data, ~1-2 min)
 ```
-- Frontend Dashboard: `http://localhost:5173`
-- Backend API Docs: `http://localhost:8000/docs`
-- PostgreSQL: Port `5432`
+
+The backend container runs `python -m backend.app.bootstrap` before starting the API. Frontend: `http://localhost:5173`, API: `http://localhost:8000/docs`, PostgreSQL: `localhost:5432` (`postgres` / `postgres`, database `predictive_maintenance`). Reset with `docker compose down -v`.
+
+### Tests
+
+```bash
+python -m pytest backend/tests -v
+```
+
+Tests never use the application database. Each run creates a throwaway SQLite database in a temp directory, migrates it, and generates the seeded dataset (about 30 seconds). To run them against PostgreSQL instead, point `TEST_DATABASE_URL` at a separate, dedicated database:
+
+```bash
+createdb -U postgres predictive_maintenance_test
+TEST_DATABASE_URL=postgresql://postgres:postgres@localhost:5432/predictive_maintenance_test python -m pytest backend/tests -v
+```
+
+### Individual Steps
+
+| Task | Command |
+|---|---|
+| Apply migrations | `python -m alembic upgrade head` |
+| Regenerate data (wipes and refills tables) | `python -m backend.app.data_generation.generator --seed 20261022` |
+| Retrain the model and rewrite the evaluation report | `python -m backend.app.ml.train` |
+| Load the small reference seed instead of generated data | `psql -U postgres -d predictive_maintenance -f database/seed_data/01_seed_reference_data.sql` |
+| Production build of the frontend | `cd frontend && npm run build` |
+
+The application uses exactly the database in `DATABASE_URL`; there is no automatic fallback. A SQLite URL (`sqlite:///./predictive_maintenance.db`) also works for a quick look but is not required.
 
 ---
 
 ## 10. Reproducibility Verification
 
-To verify that the synthetic data generator is strictly reproducible:
+The generator is deterministic for seed `20261022` and writes the ground truth with LF line endings on every OS. Its SHA-256 is:
 
-```bash
-# Run the generator
-python -m backend.app.data_generation.generator
-
-# Verify SHA-256 Checksum of Ground Truth
-python -c "import hashlib; print(hashlib.sha256(open('data/ground_truth/ground_truth.csv', 'rb').read()).hexdigest())"
 ```
-The resulting dataset checksum will match identically across repeated executions with seed `20261022`.
+3372bf6731afd02e205e4d15aec385d3b0333bd2f2771531f0ed862a9aa5b704
+```
+
+`python -m pytest backend/tests/test_reproducibility.py -v` regenerates the dataset into a temp directory and checks that it is byte-for-byte identical to the committed `data/ground_truth/ground_truth.csv`.

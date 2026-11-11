@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import {
   Factory,
   Layers,
@@ -9,8 +9,7 @@ import {
   XCircle,
   Activity,
   ArrowRight,
-  ShieldAlert,
-  Clock
+  ShieldAlert
 } from 'lucide-react';
 import {
   BarChart,
@@ -22,29 +21,12 @@ import {
   Cell
 } from 'recharts';
 import api from '../services/api';
+import MetricCard from '../components/MetricCard';
+import StatusBadge from '../components/StatusBadge';
+import { useApi } from '../hooks/useApi';
 
 export default function DashboardPage({ setActiveTab, setSelectedMachineId }) {
-  const [stats, setStats] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-
-  useEffect(() => {
-    loadDashboard();
-  }, []);
-
-  const loadDashboard = async () => {
-    try {
-      setLoading(true);
-      const data = await api.getDashboardStats();
-      setStats(data);
-      setError(null);
-    } catch (err) {
-      console.error('Failed to load dashboard statistics:', err);
-      setError('Could not connect to backend API. Please ensure FastAPI server is running on port 8000.');
-    } finally {
-      setLoading(false);
-    }
-  };
+  const { data: stats, loading, error, refresh } = useApi(() => api.getDashboardStats(), []);
 
   const handleInspectMachine = (machineId) => {
     if (setSelectedMachineId) setSelectedMachineId(machineId);
@@ -63,9 +45,9 @@ export default function DashboardPage({ setActiveTab, setSelectedMachineId }) {
     return (
       <div className="p-6 bg-red-950/40 border border-red-800 rounded-xl text-red-200">
         <h3 className="font-bold text-lg mb-2">Backend Connection Error</h3>
-        <p>{error}</p>
+        <p>Could not connect to backend API. Please ensure FastAPI server is running on port 8000.</p>
         <button
-          onClick={loadDashboard}
+          onClick={refresh}
           className="mt-4 px-4 py-2 bg-red-800 hover:bg-red-700 rounded-lg text-white font-medium"
         >
           Retry Connection
@@ -89,23 +71,16 @@ export default function DashboardPage({ setActiveTab, setSelectedMachineId }) {
     <div className="space-y-6">
       {/* 8 Main KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {kpis.map((kpi, idx) => {
-          const Icon = kpi.icon;
-          return (
-            <div
-              key={idx}
-              className="bg-slate-900 border border-slate-800 rounded-xl p-4 flex items-center justify-between shadow-sm hover:border-slate-700 transition"
-            >
-              <div>
-                <p className="text-xs text-slate-400 font-medium">{kpi.label}</p>
-                <p className="text-2xl font-bold text-white mt-1">{kpi.value}</p>
-              </div>
-              <div className={`p-3 rounded-lg ${kpi.bg}`}>
-                <Icon className={`h-6 w-6 ${kpi.color}`} />
-              </div>
-            </div>
-          );
-        })}
+        {kpis.map((kpi) => (
+          <MetricCard
+            key={kpi.label}
+            label={kpi.label}
+            value={kpi.value}
+            icon={kpi.icon}
+            iconColor={kpi.color}
+            iconBg={kpi.bg}
+          />
+        ))}
       </div>
 
       {/* Grid: Health Chart & Recent Alerts */}
@@ -115,10 +90,10 @@ export default function DashboardPage({ setActiveTab, setSelectedMachineId }) {
           <div className="flex items-center justify-between mb-4">
             <div>
               <h3 className="font-semibold text-white text-sm">Overall Machine Health Distribution</h3>
-              <p className="text-xs text-slate-400">Distribution of 100 active machines by current health score</p>
+              <p className="text-xs text-slate-400">Distribution of active machines by current health score</p>
             </div>
             <span className="text-xs font-mono px-2 py-1 bg-slate-800 rounded text-slate-300">
-              100 Total Assets
+              {stats.total_machines} Total Assets
             </span>
           </div>
 
@@ -168,15 +143,7 @@ export default function DashboardPage({ setActiveTab, setSelectedMachineId }) {
                 >
                   <div className="flex items-center justify-between mb-1">
                     <span className="font-mono text-[10px] text-slate-400">{alert.issue_type}</span>
-                    <span
-                      className={`text-[10px] font-semibold px-1.5 py-0.5 rounded ${
-                        alert.severity === 'CRITICAL'
-                          ? 'bg-rose-500/20 text-rose-400'
-                          : 'bg-amber-500/20 text-amber-400'
-                      }`}
-                    >
-                      {alert.severity}
-                    </span>
+                    <StatusBadge type="severity" value={alert.severity} size="xs" />
                   </div>
                   <p className="text-slate-300 line-clamp-2">{alert.description}</p>
                 </div>
@@ -260,3 +227,4 @@ export default function DashboardPage({ setActiveTab, setSelectedMachineId }) {
     </div>
   );
 }
+

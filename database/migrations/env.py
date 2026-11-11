@@ -18,13 +18,14 @@ from backend.app.models import Base
 config = context.config
 
 # Interpret the config file for Python logging.
-if config.config_file_name is not None:
+if config.config_file_name is not None and config.attributes.get("configure_logging", True):
     fileConfig(config.config_file_name)
 
 target_metadata = Base.metadata
 
 def get_url():
-    return settings.DATABASE_URL or "sqlite:///./predictive_maintenance.db"
+    from backend.app.core.database import engine
+    return engine.url.render_as_string(hide_password=False)
 
 def run_migrations_offline() -> None:
     """Run migrations in 'offline' mode."""
@@ -64,3 +65,4 @@ if context.is_offline_mode():
     run_migrations_offline()
 else:
     run_migrations_online()
+

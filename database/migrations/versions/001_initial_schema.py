@@ -110,8 +110,8 @@ def upgrade() -> None:
         sa.Column('is_anomaly', sa.Boolean(), nullable=False, server_default='false'),
         sa.Column('anomaly_score', sa.Float(), nullable=False, server_default='0.0'),
         sa.Column('created_at', sa.DateTime(), nullable=False),
+        # sensor_id is intentionally not a FK so UNKNOWN_SENSOR edge-case telemetry can persist.
         sa.ForeignKeyConstraint(['machine_id'], ['machines.id'], ondelete='CASCADE'),
-        sa.ForeignKeyConstraint(['sensor_id'], ['sensors.id'], ondelete='CASCADE'),
         sa.PrimaryKeyConstraint('id')
     )
     op.create_index('idx_telemetry_sensor_timestamp', 'telemetry_events', ['sensor_id', 'timestamp'])

@@ -1,0 +1,60 @@
+{
+  "report_generated_at": "2026-11-11T07:16:40.796932",
+  "target": "Equipment Failure within Next 24 Hours",
+  "train_set_size": 2292,
+  "test_set_size": 764,
+  "total_test_failures": 170,
+  "champion_model": {
+    "model_type": "RandomForestClassifier",
+    "accuracy": 0.9372,
+    "precision": 0.942,
+    "recall": 0.7647,
+    "f1_score": 0.8442,
+    "roc_auc": 0.9368,
+    "confusion_matrix": {
+      "true_negatives": 586,
+      "false_positives": 8,
+      "false_negatives": 40,
+      "true_positives": 130
+    },
+    "failures_detected_in_advance": 130,
+    "missed_failures": 40,
+    "false_alarms": 8,
+    "feature_importances": {
+      "avg_temperature_24h": 0.073,
+      "max_temperature_24h": 0.1295,
+      "avg_vibration_24h": 0.0402,
+      "vibration_trend": 0.1178,
+      "pressure_fluctuation_24h": 0.2492,
+      "current_fluctuation_24h": 0.3122,
+      "avg_rpm_24h": 0.0365,
+      "operating_hours": 0.0303,
+      "missing_sensor_count": 0.0,
+      "previous_failure_count": 0.0058,
+      "previous_maintenance_count": 0.0055
+    }
+  },
+  "baseline_model": {
+    "model_type": "LogisticRegression",
+    "accuracy": 0.9463,
+    "precision": 0.9388,
+    "recall": 0.8118,
+    "f1_score": 0.8707,
+    "roc_auc": 0.912,
+    "confusion_matrix": {
+      "true_negatives": 585,
+      "false_positives": 9,
+      "false_negatives": 32,
+      "true_positives": 138
+    },
+    "failures_detected_in_advance": 138,
+    "missed_failures": 32,
+    "false_alarms": 9
+  },
+  "comparison_summary": {
+    "rf_f1_vs_lr": -0.0265,
+    "rf_recall_vs_lr": -0.0471,
+    "rf_accuracy_vs_lr": -0.0091,
+    "winner": "LogisticRegression"
+  }
+}

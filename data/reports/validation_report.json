@@ -1,0 +1,30 @@
+{
+  "validation_timestamp": "2026-11-11T07:11:33.607473",
+  "total_new_issues_detected": 33,
+  "total_exceptions_recorded": 33,
+  "breakdown_by_category": {
+    "unknown_sensors": 1,
+    "out_of_range_or_unit_mismatch": 3,
+    "failure_without_lead_warning": 24,
+    "invalid_maintenance_timestamps": 1,
+    "zero_instead_of_missing": 4,
+    "duplicate_records": 0,
+    "foreign_key_violations": 0
+  },
+  "summary_by_type": {
+    "FAILURE_WITHOUT_WARNING": 24,
+    "INVALID_MAINTENANCE_TIME": 1,
+    "INVALID_UNIT": 1,
+    "OUT_OF_RANGE_READING": 2,
+    "UNKNOWN_SENSOR": 1,
+    "ZERO_INSTEAD_OF_MISSING": 4
+  },
+  "summary_by_severity": {
+    "CRITICAL": 28,
+    "HIGH": 5
+  },
+  "summary_by_resolution_status": {
+    "UNRESOLVED": 33
+  },
+  "status": "PASSED_WITH_EXCEPTIONS_DOCUMENTED"
+}

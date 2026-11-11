@@ -21,7 +21,7 @@ Run both commands from the project root. Training reads the database configured 
 
 `FailurePredictor` in `backend/app/ml/predictor.py` loads that joblib file. If the file is missing or unreadable, `FailurePredictor` raises `ModelNotAvailableError`: prediction endpoints return `503` and `/health` reports the model as `UNAVAILABLE`. It does not fall back to a heuristic or call the training code. `python -m backend.app.bootstrap` trains the model when the artifact is absent.
 
-## How rows are built
+## How rows are built 
 
 `train_and_evaluate_models()` calls:
 
@@ -74,6 +74,7 @@ LogisticRegression(
     random_state=settings.RANDOM_SEED,
 )
 ```
+
 
 Random Forest probabilities come from `predict_proba` on unscaled test rows. Logistic regression probabilities come from the scaled test rows.
 

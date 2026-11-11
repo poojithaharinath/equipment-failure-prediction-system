@@ -122,3 +122,4 @@ export default function AppLayout({ activeTab, setActiveTab, children }) {
     </div>
   );
 }
+

@@ -6,7 +6,7 @@ from backend.app.core.config import settings
 from backend.app.core.database import check_database
 from backend.app.ml.predictor import ModelNotAvailableError, get_model_status
 
-# Import API routers
+# Import API routers for each endpoint
 from backend.app.api.plants import router as plants_router
 from backend.app.api.production_lines import router as lines_router
 from backend.app.api.machines import router as machines_router

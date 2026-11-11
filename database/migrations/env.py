@@ -13,8 +13,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..",
 from backend.app.core.config import settings
 from backend.app.models import Base
 
-# this is the Alembic Config object, which provides
-# access to the values within the .ini file in use.
+# this is the Alembic Config object, which provides access to the values within the .ini file in use.
 config = context.config
 
 # Interpret the config file for Python logging.
